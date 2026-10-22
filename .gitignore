@@ -1,5 +1,6 @@
 .venv/
 __pycache__/
+*.pyc
 .pytest_cache/
 .ruff_cache/
 .DS_Store
@@ -7,4 +8,18 @@ __pycache__/
 .env.*
 data/
 reports/
+incidents/
+release/
+consolidation/
+publication/
 .worktrees/
+*.npz
+*.npy
+*.parquet
+*.arrow
+*.duckdb
+*.sqlite*
+*.safetensors
+*.bin
+*.jsonl
+*.log

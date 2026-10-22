@@ -50,8 +50,10 @@ def test_dataset_tokenizer_reproduction_and_no_retired_keys():
     data = json.loads((ROOT / "data/bounded-poc-v8-repair/dataset.json").read_text())
     retired = [
         r
-        for p in (ROOT / "data").glob("bounded-poc-*/dataset.json")
-        if p.parent.name != "bounded-poc-v8-repair"
+        # Reproduce the historical v8 population, independent of future datasets.
+        for version in ("v1", "v2", "v3", "upstream", "v4-confirm", "v5-pointer",
+                        "v6-final", "v7-capstone")
+        for p in [ROOT / f"data/bounded-poc-{version}/dataset.json"]
         for r in json.loads(p.read_text())["rows"]
     ]
     retired += json.loads((ROOT / "data/lookup-followup-v1/dataset.json").read_text())["rows"]

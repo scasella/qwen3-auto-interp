@@ -207,24 +207,36 @@ def run_one(root, experiment, script, entry, catalog, checkpoint=None):
 
 
 def main():
+    from src.poc.source_paths import model17_path
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path,
                         help="Pinned HF snapshot directory, if outside data/hf-cache")
     parser.add_argument("--json", type=Path, help="Optional NEW summary path outside data/reports")
+    parser.add_argument("--historical-only", action="store_true",
+                        help="Run only the frozen v1–v8 audit population")
+    parser.add_argument("--model17", type=Path, default=model17_path(),
+                        help="Pinned Qwen3-1.7B checkpoint for v10")
     args = parser.parse_args()
     if args.json:
         target = args.json.absolute()
         if target.exists() or any(target.is_relative_to(ROOT / p) for p in ("data", "reports")):
             parser.error("--json must be a new file outside protected data/ and reports/")
+    if not (ROOT / "release/protected-sha256.json").is_file():
+        parser.error("BLOCKED: private evidence and provenance inventories are omitted from "
+                     "this source-only repository; no scientific audit was run. "
+                     "Use scripts/verify_source_only.py for package integrity.")
     start = time.monotonic()
     failures, results = [], []
     count, old_count = verify_inventory()
     catalog = json.loads((ROOT / "release/audit-paths.json").read_text())
+    from scripts.verify_historical_release_v9 import historical_dataset_view
     print(f"Protected SHA-256: {count}/{count}; original v8 inventory: {old_count}/{old_count}")
     print("Experiment                       Pairs  Max NumPy delta  Audit  Manifest SHA-256")
     for experiment, script, entry in AUDITS:
         try:
-            result = run_one(ROOT, experiment, script, entry, catalog, args.checkpoint)
+            with historical_dataset_view(ROOT):
+                result = run_one(ROOT, experiment, script, entry, catalog, args.checkpoint)
             results.append(result)
             error = result["maximum_delta_error"]
             text = "n/a" if error is None else f"{error:.9g}"
@@ -233,17 +245,38 @@ def main():
         except Exception as exc:
             failures.append(dict(experiment=experiment, error=f"{type(exc).__name__}: {exc}"))
             print(f"{experiment:32} FAIL: {type(exc).__name__}: {exc}", flush=True)
+    campaign_count = 0
+    if not args.historical_only:
+        from scripts import campaign_audit
+
+        campaign = campaign_audit.load_catalog()
+        campaign_count = campaign_audit.verify_references(campaign)
+        print(f"V12 protected references: {campaign_count}/{campaign_count}", flush=True)
+        for study in ("v9", "v10", "v11", "v12"):
+            try:
+                result = campaign_audit.run_one(study, campaign, args.model17)
+                results.append(result)
+                print(f"{result['experiment']:36} "
+                      f"{result['repeat_file_pairs']:3} pairs / {result['repeat_arrays']:4} arrays  "
+                      f"delta {result['maximum_delta_error']:.9g}  AUDIT PASS  "
+                      f"scientific {'PASS' if result['scientific_passed'] else 'FAIL'}", flush=True)
+            except Exception as exc:
+                failures.append(dict(experiment=study, error=f"{type(exc).__name__}: {exc}"))
+                print(f"{study}: AUDIT FAIL: {type(exc).__name__}: {exc}", flush=True)
+        campaign_audit.verify_references(campaign)
     # Independent post-verification detects accidental writes by this adapter or any auditor.
     verify_inventory()
     elapsed = time.monotonic() - start
     report = dict(passed=not failures, protected_files=count, original_v8_files=old_count,
+                  campaign_protected_references=campaign_count,
                   elapsed_seconds=elapsed, audits=results, failures=failures,
                   scope="CPU/NumPy integrity verification; scientific gate failures remain failures")
     if args.json:
         with args.json.open("x") as stream:
             json.dump(report, stream, indent=2, allow_nan=False)
             stream.write("\n")
-    print(f"{len(results)}/{len(AUDITS)} audits passed in {elapsed:.2f}s; "
+    total = len(AUDITS) + (0 if args.historical_only else 4)
+    print(f"{len(results)}/{total} audits passed in {elapsed:.2f}s; "
           "protected bytes unchanged. Audit success does not mean scientific success.")
     if failures:
         print("Checkpoint missing? Download the exact revision listed in README.md, "

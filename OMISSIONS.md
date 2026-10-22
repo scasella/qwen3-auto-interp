@@ -1,23 +1,11 @@
-# Deliberate omissions and verification limits
+# Source-only scope
 
-The archive includes only allowlisted project source and configuration, license
-notices, packaging documentation, and a source provenance manifest.
+Included: current project-owned Python source and tests through v12-cross-scale-3hop, dependency/build metadata, Apache-2.0 code licensing notices, and research narrative/architecture/agent documentation.
 
-Excluded: every `data/` and `reports/` file, all databases/WAL/SHM companions,
-corpus text and samples, numeric research arrays and token IDs, model cache,
-review/process logs, historical source blobs, original protection inventories,
-release path mappings, Git objects and commit identities, worktrees, Finder
-metadata, credentials, environment files, and local application settings.
+Excluded: all corpus text and corpus files; all `data/`, `reports/`, `incidents/`, `release/` and `consolidation/` artifacts; checkpoints/tokenizers; archived prompts/token arrays/results/reviews; historical source snapshots; registration Git objects; local logs, caches, credentials, machine-specific paths and private Git ancestry. Source-defined synthetic test fixtures and response-blind word lists are software inputs, not exported frozen datasets or real-corpus excerpts.
 
-The source manifest records source paths and digests only. It does not expose
-private absolute paths or list private corpus filenames. No protected artifact
-was sanitized, regraded or assigned a replacement digest to create this export.
+The current source is a derivative for inspection and new development. Local prerequisite-workspace and checkpoint paths are portable, the master auditor clearly blocks without evidence, and individual evidence-dependent tests skip with named missing inputs. The source manifest records exported bytes; it is not a preregistration or evidence inventory. Frozen scientific source bytes and every protected artifact remain unchanged in the private archive.
 
-Full historical audit execution requires the omitted evidence, model bytes and
-release-adapter dependency closure. The bundled verifier is preserved source;
-it cannot report a complete campaign pass without those inputs. Missing-data
-failures must not be reported as scientific failures or successful checks.
+Historical runners have fixed paths and provenance dependencies. They are not turnkey replays from this source-only clone. For new inference, create an isolated namespace, register a new protocol and output paths, and obtain the complete prior-key registry before claiming disjoint keys. Never present unavailable evidence checks as passes.
 
-Later public derivatives, if authorized, must have their own names, hashes,
-transformation records and honest verification scope. Do not push the original
-private Git history to a public repository.
+The private GitHub history descends only from the original sanitized source-only commit. This update does not publish a release or change visibility. Research documents are supplied for review; the existing software license scope is retained unchanged.

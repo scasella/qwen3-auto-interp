@@ -16,6 +16,22 @@ from src.schemas.contracts import (
 )
 
 
+@pytest.fixture(autouse=True)
+def historical_v8_dataset_scope(request):
+    """Future/incomplete datasets must not redefine v8's registered population."""
+    from pathlib import Path
+
+    inventory = Path(__file__).resolve().parents[1] / "release/protected-sha256.json"
+    if request.module.__name__.endswith("test_poc_v8_repair") and inventory.is_file():
+        from scripts.verify_all_audits import ROOT
+        from scripts.verify_historical_release_v9 import historical_dataset_view
+
+        with historical_dataset_view(ROOT):
+            yield
+    else:
+        yield
+
+
 @pytest.fixture
 def unit():
     return UnitRef(kind="mlp", layer=0, index=0)
@@ -218,3 +234,38 @@ def settings(tmp_path):
     s.swarm.pipelines = 2
     s.swarm.circuit_workers = 1
     return s
+
+
+# Exact archived-evidence dependencies, not a blanket failure suppression.
+ARCHIVED_INPUTS = {
+    "test_poc_v9_json_hop0.py::test_prepare_independently_rejects_empty_retirement_pool": "data/hf-cache/models--Qwen--Qwen3-0.6B/snapshots/c1899de289a04d12100db370d81485cdf75e47ca/tokenizer.json",
+    "test_poc_v4_confirm.py::test_registered_dataset_and_invalid_donors": "data/bounded-poc-v4-confirm/dataset.json",
+    "test_poc_v5_pointer.py::test_frozen_dataset_roles_invariants_and_tokenizer_only_reproduction": "data/bounded-poc-v5-pointer/dataset.json",
+    "test_poc_v6_final.py::test_all_inline_tokens_donors_and_disjoint_keys_reproduce_without_model": "data/bounded-poc-v6-final/dataset.json",
+    "test_poc_v6_final.py::test_v4_layout_claim_is_not_assumed_true": "data/bounded-poc-v4-confirm/dataset.json",
+    "test_poc_v7_capstone.py::test_all_archived_template_tokens_donors_and_disjoint_keys_reproduce_without_model": "data/bounded-poc-v7-capstone/dataset.json",
+    "test_poc_v7_capstone.py::test_v4_layout_claim_is_not_assumed_true": "data/bounded-poc-v4-confirm/dataset.json",
+    "test_poc_v7_capstone.py::test_exact_archived_v4_structure_for_every_prompt": "data/bounded-poc-v4-confirm/dataset.json",
+    "test_poc_v8_repair.py::test_dataset_tokenizer_reproduction_and_no_retired_keys": "data/bounded-poc-v8-repair/dataset.json",
+    "test_poc_v9_json_hop0.py::test_actual_tokenizer_complete_dataset_and_valid_json": "data/bounded-poc-v9-json-hop0-restart1/dataset.json",
+    "test_poc_v10_qwen17b.py::test_no_prompt_dropping_or_donor_reassignment": "data/bounded-poc-v7-capstone/dataset.json",
+    "test_poc_v10_stable_harness.py::test_no_prompt_dropping_or_donor_reassignment": "data/bounded-poc-v7-capstone/dataset.json",
+    "test_poc_v10_numerics.py::test_saved_large_value_q_patch_meets_fixed_tolerance": "data/bounded-poc-v10-qwen17b-restart1/discovery-layer-22.npz",
+    "test_poc_v10_recovery.py::test_recovery_freshness_and_independent_grammar": "data/bounded-poc-v10-qwen17b-restart1/dataset.json",
+    "test_poc_v10_recovery.py::test_registered_v9_source_restoration_is_exact": "incidents/v10-recovery-20261021/incident.json",
+    "test_poc_v10_restart2.py::test_second_recovery_retires_all_previous_attempts": "data/bounded-poc-v10-qwen17b-restart2/dataset.json",
+    "test_campaign_verification.py::test_git_registration_proofs_bind_blobs_and_detect_tampering": "consolidation/2026-10-22/git-proofs.json",
+    "test_campaign_verification.py::test_registered_view_preserves_source_versions_and_rejects_writes": "consolidation/2026-10-22/audit-catalog.json",
+    "test_campaign_verification.py::test_v9_dataset_scope_is_registered_and_restores_glob": "consolidation/2026-10-22/audit-catalog.json",
+}
+
+
+def pytest_collection_modifyitems(items):
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    for item in items:
+        name = item.nodeid.removeprefix("tests/").split("[", 1)[0]
+        required = ARCHIVED_INPUTS.get(name)
+        if required and not (root / required).is_file():
+            item.add_marker(pytest.mark.skip(reason=f"Private archived input omitted: {required}"))
