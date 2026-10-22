@@ -1,0 +1,1 @@
+"""Validated data contracts."""

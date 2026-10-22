@@ -1,0 +1,51 @@
+model:
+  name: Qwen/Qwen3-0.6B
+  revision: main
+  device: mps
+  dtype: bfloat16
+  local_files_only: false
+  seed: 42
+worker:
+  batch_size: 64
+  attribution_batch_size: 1
+  max_seq_len: 128
+  queue_size: 256
+  purge_every: 25
+calibration:
+  units_per_pass: 128
+  examples_per_band: 12
+  min_tokens: 10000
+  max_documents: 10000
+  duckdb_memory_limit: 2GB
+swarm:
+  pipelines: 64
+  max_agent_calls: 256
+  circuit_workers: 16
+  pi_workers: 2
+  max_strikes: 3
+  max_upstream_candidates: 16
+  pi_every: 25
+thresholds:
+  battery_pass_rate: 0.8
+  paired_drop: 0.25
+  min_span: 0.000001
+  circuit_effect: 0.1
+  gate_agreement: 0.8
+codex:
+  executable: codex
+  model: gpt-6-luna
+  max_processes: 8
+  tokens_per_minute: 1000000
+  output_token_reserve: 8192
+  harness_token_reserve: 16000
+  max_attempts: 3
+  timeout_seconds: 600
+  max_capture_bytes: 2097152
+  explorer: {effort: high}
+  falsifier: {effort: low}
+  tracer: {effort: medium}
+  pi: {effort: xhigh}
+paths:
+  activations: data/activations.duckdb
+  circuits: data/circuits.sqlite
+
